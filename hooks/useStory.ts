@@ -239,7 +239,8 @@ export function useStory() {
 
         /* 高潮节点：愿力检定 + 阿哲登场 */
         if (node.climax) {
-          if (willpower >= (node.requiresWillpower ?? 0)) {
+          const granted = willpower >= (node.requiresWillpower ?? 0);
+          if (granted) {
             await push([
               { text: NARRATIVE.climaxOk, tone: "white" },
               {
@@ -260,6 +261,15 @@ export function useStory() {
               tone: azheFriend ? "amber" : "red",
             },
           ]);
+
+          /* 未获授权：不弹选择、不生成补写，命运维持原样 */
+          if (!granted) {
+            const deniedTones: Tone[] = ["white", "red", "white"];
+            await push(
+              NARRATIVE.climaxDenied.map((t, i) => ({ text: t, tone: deniedTones[i] }))
+            );
+            continue;
+          }
         }
 
         const pick = await askChoice(
@@ -316,34 +326,48 @@ export function useStory() {
         positive ? FALLBACK_VERDICT.good : FALLBACK_VERDICT.bad
       );
 
-      /* 9. 删不掉的名场面 */
+      /* 9. 删不掉的名场面（愿力达标，才允许尝试抹除） */
       await push([{ text: "", instant: true }]);
-      await push([{ text: NARRATIVE.deleteAsk, tone: "white" }]);
-      const del = await askChoice("这一步不可逆。", [
-        { id: "del", label: "永久删除这条黑历史", hint: "rm -rf", tone: "cruel" },
-        { id: "keep", label: "算了，留着吧", hint: "保留", tone: "neutral" },
-      ]);
 
-      if (del === "del") {
-        await waitEffect("glitch");
-        await push([{ text: NARRATIVE.deleteCmd, tone: "white" }]);
-        await push([{ text: NARRATIVE.deleteStep, tone: "green" }]);
-        await delay(260);
-        await push([{ text: NARRATIVE.deleteDone, tone: "green" }]);
-        await delay(520);
-        await push([
-          { text: NARRATIVE.deleteSector, tone: "dim" },
-          { text: NARRATIVE.deleteRecover, tone: "dim" },
+      if (willpower >= REWRITE_THRESHOLD) {
+        await push([{ text: NARRATIVE.deleteAsk, tone: "white" }]);
+        const del = await askChoice("这一步不可逆。", [
+          { id: "del", label: "永久删除这条黑历史", hint: "rm -rf", tone: "cruel" },
+          { id: "keep", label: "算了，留着吧", hint: "保留", tone: "neutral" },
         ]);
-        await waitEffect("flash");
-        await waitEffect("shake");
-        await push([
-          { text: NARRATIVE.deleteRestored, tone: "red" },
-          { text: `${MAIN.meta}  ${MAIN.fileName}`, tone: "red" },
-        ]);
-        await push([{ text: NARRATIVE.deleteLine, tone: "white" }]);
+
+        if (del === "del") {
+          await waitEffect("glitch");
+          await push([{ text: NARRATIVE.deleteCmd, tone: "white" }]);
+          await push([{ text: NARRATIVE.deleteStep, tone: "green" }]);
+          await delay(260);
+          await push([{ text: NARRATIVE.deleteDone, tone: "green" }]);
+          await delay(520);
+          await push([
+            { text: NARRATIVE.deleteSector, tone: "dim" },
+            { text: NARRATIVE.deleteRecover, tone: "dim" },
+          ]);
+          await waitEffect("flash");
+          await waitEffect("shake");
+          await push([
+            { text: NARRATIVE.deleteRestored, tone: "red" },
+            { text: `${MAIN.meta}  ${MAIN.fileName}`, tone: "red" },
+          ]);
+          await push([{ text: NARRATIVE.deleteLine, tone: "white" }]);
+        } else {
+          await push([{ text: "司命：那就留着。有些东西，留着比抹去更合适。", tone: "white" }]);
+        }
       } else {
-        await push([{ text: "司命：那就留着。有些东西，留着比抹去更合适。", tone: "white" }]);
+        /* 愿力不足：连抹除这个选项都不给 */
+        await push([{ text: NARRATIVE.deleteDeniedAsk, tone: "white" }]);
+        await push([
+          {
+            text: `愿力 ${willpower} · 未达 ${REWRITE_THRESHOLD} · 抹除权限未授予`,
+            tone: "red",
+          },
+        ]);
+        await waitEffect("shake");
+        await push([{ text: NARRATIVE.deleteDeniedLine, tone: "white" }]);
       }
 
       /* 10. 彩蛋：现场投稿 */
@@ -370,9 +394,12 @@ export function useStory() {
         "司命：已归档。这一条，命运暂为你保管。"
       );
 
-      /* 11. 结束 */
+      /* 11. 结束（恶意路线走专属收尾） */
       await push([{ text: "", instant: true }]);
-      await push(NARRATIVE.ending.map((t) => ({ text: t, tone: "white" as Tone })));
+      const endingLines: readonly string[] = positive
+        ? NARRATIVE.ending
+        : NARRATIVE.endingCruel;
+      await push(endingLines.map((t) => ({ text: t, tone: "white" as Tone })));
       setCursor(true);
       setHint(null);
     })();

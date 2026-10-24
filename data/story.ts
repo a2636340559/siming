@@ -201,6 +201,12 @@ export const NARRATIVE = {
   backToMain: "司命：他人的因果已了。回到你自己的路上。",
   climaxOk: "> rewrite --memory=高中告白",
   climaxLow: "愿力不足 · 改写被驳回",
+  /** 高潮节点未获授权：不弹选择、不生成补写，命运维持原样并继续下沉 */
+  climaxDenied: [
+    "> rewrite --aborted",
+    "改写未获授权 · 这一页维持原样",
+    "司命：愿力不够，我替你翻不动它。它会沿着原来的路，继续往下走。",
+  ],
   azheHelp: "[阿哲] 私聊你：去吧。当年那封信，我这儿还留着复印件呢。",
   azheHurt: "[阿哲] 在群里 @你：哎，当年那封情书，好像不是你自己写的吧？",
   settleCmd: "> settle",
@@ -214,6 +220,9 @@ export const NARRATIVE = {
   deleteRestored: "> 恢复完成。",
   deleteLine:
     "司命：抹去不等于不存在。它只是沉得更深了。",
+  /** 愿力不足时，司命连抹除这个选项都不给 */
+  deleteDeniedAsk: "司命：这一页，我不替你动。",
+  deleteDeniedLine: "司命：你欠下的还没还清。还清了，这一页才由你处置。",
   submitHead: "> 检测到新投稿",
   submitFrom: "[访客] 向你投递了一条黑历史",
   submitAsk: "司命：这一条，交由命运过目。",
@@ -222,6 +231,12 @@ export const NARRATIVE = {
     "司命：今日之事，到此为止。",
     "司命：你的路，我已记下。旁人的路，也一样。",
     "司命：回收站常开。有需要时，再来。",
+  ],
+  /** 恶意路线的专属收尾：越改越沉 */
+  endingCruel: [
+    "司命：今日之事，到此为止。",
+    "司命：你什么都没改写。那些路还在原处，旁人的那一条，也一样。",
+    "司命：回收站常开。这笔账，我暂不替你销。",
   ],
 } as const;
 
